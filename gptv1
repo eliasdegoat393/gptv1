@@ -1,0 +1,301 @@
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+
+local humanoid = character:WaitForChild("Humanoid")
+
+local spinning = false
+local speed = 10 -- Default spinning speed
+
+local function startSpin()
+    spinning = true
+    while spinning do
+        humanoid.RootPart.CFrame = humanoid.RootPart.CFrame * CFrame.Angles(0, math.rad(speed), 0)
+        wait()
+    end
+end
+
+local function stopSpin()
+    spinning = false
+end
+
+local walking = false
+local speed1 = 10 -- Default walking speed
+
+local function startWalk()
+    walking = true
+    while walking do
+        humanoid.RootPart.CFrame = humanoid.RootPart.CFrame * CFrame.new(0, 0, speed1)
+        wait()
+    end
+end
+
+local function stopWalk()
+    walking = false
+end
+
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Window = Library.CreateLib("ChatGPT Scripts", "DarkTheme")
+
+local TabRage = Window:NewTab("Rage")
+local SectionRage = TabRage:NewSection("Rage Settings")
+
+local SpinToggle = SectionRage:NewToggle("SpinBot", "Makes you Spin", function(state)
+    if state then
+        print("SpinBot Enabled")
+        startSpin()
+    else
+        print("SpinBot Disabled")
+        stopSpin()
+    end
+end)
+
+SectionRage:NewSlider("SpinSpeed", "Adjust Spin Speed", 100, 1, function(value)
+    speed = value
+end)
+
+local WalkToggle = SectionRage:NewToggle("WalkFast", "Makes you Walk Fast", function(state)
+    if state then
+        print("WalkFast Enabled")
+        startWalk()
+    else
+        print("WalkFast Disabled")
+        stopWalk()
+    end
+end)
+
+local WalkSpeedTextBox = SectionRage:NewTextBox("WalkSpeed", "Enter Walk Speed", function(txt)
+    local newSpeed = tonumber(txt)
+    if newSpeed then
+        speed1 = newSpeed
+    else
+        warn("Please enter a valid number for the walk speed.")
+    end
+end)
+
+local TabEsp = Window:NewTab("ESP")
+local SectionEsp = TabEsp:NewSection("ESP Settings")
+
+local ESP_ENABLED = false
+local ESP_DISTANCE = 50
+local ESP_COLOR = Color3.fromRGB(255, 0, 0)
+local ESP_FONT = Enum.Font.GothamBold
+
+local espLabels = {}
+
+local function createESP(player)
+    local character = player.Character
+    if character then
+        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+        if humanoidRootPart then
+            local espLabel = Instance.new("BillboardGui")
+            espLabel.Adornee = humanoidRootPart
+            espLabel.Size = UDim2.new(0, 100, 0, 20)
+            espLabel.StudsOffset = Vector3.new(0, 3, 0)
+
+            local espText = Instance.new("TextLabel")
+            espText.Parent = espLabel
+            espText.BackgroundTransparency = 1
+            espText.Size = UDim2.new(1, 0, 1, 0)
+            espText.Text = player.Name
+            espText.Font = ESP_FONT
+            espText.TextColor3 = ESP_COLOR
+            espText.TextSize = 16
+
+            espLabel.Parent = game.Workspace.CurrentCamera
+
+            espLabels[player.UserId] = espLabel
+        end
+    end
+end
+
+local function updateESPPositions()
+    if ESP_ENABLED then
+        local localCharacter = game.Players.LocalPlayer.Character
+        if localCharacter then
+            for _, player in ipairs(game.Players:GetPlayers()) do
+                if player ~= game.Players.LocalPlayer then
+                    local character = player.Character
+                    if character then
+                        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+                        if humanoidRootPart then
+                            local distance = (humanoidRootPart.Position - localCharacter.HumanoidRootPart.Position).magnitude
+                            if distance <= ESP_DISTANCE then
+                                if not espLabels[player.UserId] then
+                                    createESP(player)
+                                end
+                            elseif espLabels[player.UserId] then
+                                espLabels[player.UserId]:Destroy()
+                                espLabels[player.UserId] = nil
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+local ESPEnabledToggle = SectionEsp:NewToggle("Toggle ESP", "Toggle ESP On or Off", function(state)
+    ESP_ENABLED = state
+    if state then
+        print("ESP Enabled")
+    else
+        print("ESP Disabled")
+        for _, label in pairs(espLabels) do
+            label:Destroy()
+        end
+        espLabels = {}
+    end
+end)
+
+local ESPDistanceTextBox = SectionEsp:NewTextBox("Set ESP Distance", "Enter the distance for ESP", function(txt)
+    local newDistance = tonumber(txt)
+    if newDistance then
+        ESP_DISTANCE = newDistance
+        for _, label in pairs(espLabels) do
+            label.StudsOffset = Vector3.new(0, newDistance * 0.1, 0)
+        end
+    else
+        print("Invalid input. Please enter a valid number.")
+    end
+end)
+
+local TabMisc = Window:NewTab("Miscs")
+local SectionMisc = TabMisc:NewSection("Miscellaneous")
+
+local TeleportEnabled = false
+local TeleportLoop = nil
+local TeleportInterval = 5 -- Default teleport interval in seconds
+
+local function teleportRandomPlace()
+    local player = game.Players.LocalPlayer
+    local character = player.Character
+    if not character then
+        character = player.CharacterAdded:Wait()
+    end
+    
+    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+    
+    local teleportPositions = {
+        Vector3.new(10, 0, 10),
+        Vector3.new(-30, 0, 40),
+        Vector3.new(50, 0, -20),
+        Vector3.new(-10, 0, -50),
+        Vector3.new(0, 0, 0)
+    }
+    
+    local randomIndex = math.random(1, #teleportPositions)
+    local newPosition = teleportPositions[randomIndex]
+    
+    humanoidRootPart.CFrame = CFrame.new(newPosition)
+end
+
+local RandomMiscEnabled = false
+local RandomMiscLoop = nil
+local RandomParts = {}
+
+local PlaceSpeed = 1 -- Default place speed (in seconds)
+local RemoveInterval = 30 -- Default time interval before removing blocks (in seconds)
+
+local function spawnRandomPart()
+    local part = Instance.new("Part")
+    part.Size = Vector3.new(math.random(1, 5), math.random(1, 5), math.random(1, 5))
+    part.Position = Vector3.new(math.random(-50, 50), math.random(5, 50), math.random(-50, 50))
+    part.Anchored = true
+    part.CanCollide = false
+    part.Parent = game.Workspace
+    table.insert(RandomParts, part)
+end
+
+local function changeRandomPartColor()
+    for _, part in ipairs(RandomParts) do
+        part.Color = Color3.fromRGB(math.random(0, 255), math.random(0, 255), math.random(0, 255))
+    end
+end
+
+local function removeRandomParts()
+    while RandomMiscEnabled do
+        wait(RemoveInterval)
+        if #RandomParts > 0 then
+            RandomParts[1]:Destroy()
+            table.remove(RandomParts, 1)
+        end
+    end
+end
+
+local ToggleRandomMisc = SectionMisc:NewToggle("Toggle Random Misc", "Toggle Random Misc On or Off", function(state)
+    RandomMiscEnabled = state
+    if state then
+        print("Random Misc Enabled")
+        RandomMiscLoop = coroutine.create(function()
+            while RandomMiscEnabled do
+                wait(PlaceSpeed)
+                spawnRandomPart()
+                changeRandomPartColor()
+            end
+        end)
+        coroutine.resume(RandomMiscLoop)
+        coroutine.wrap(removeRandomParts)()
+    else
+        print("Random Misc Disabled")
+        if RandomMiscLoop then
+            coroutine.yield(RandomMiscLoop)
+            RandomMiscLoop = nil
+        end
+        for _, part in ipairs(RandomParts) do
+            part:Destroy()
+        end
+        RandomParts = {}
+    end
+end)
+
+local PlaceSpeedTextBox = SectionMisc:NewTextBox("Place Speed", "Enter place speed in seconds", function(txt)
+    local newSpeed = tonumber(txt)
+    if newSpeed and newSpeed > 0 then
+        PlaceSpeed = newSpeed
+    else
+        warn("Please enter a valid positive number for the place speed.")
+    end
+end)
+
+local RemoveIntervalTextBox = SectionMisc:NewTextBox("Remove Interval", "Enter remove interval in seconds", function(txt)
+    local newInterval = tonumber(txt)
+    if newInterval and newInterval > 0 then
+        RemoveInterval = newInterval
+    else
+        warn("Please enter a valid positive number for the remove interval.")
+    end
+end)
+
+game:GetService("RunService").Stepped:Connect(function()
+    updateESPPositions()
+end)
+
+local TeleportEnabledToggle = SectionMisc:NewToggle("Toggle Teleport", "Toggle Teleport On or Off", function(state)
+    TeleportEnabled = state
+    if state then
+        print("Teleport Enabled")
+        TeleportLoop = coroutine.create(function()
+            while TeleportEnabled do
+                wait(TeleportInterval)
+                teleportRandomPlace()
+            end
+        end)
+        coroutine.resume(TeleportLoop)
+    else
+        print("Teleport Disabled")
+        if TeleportLoop then
+            coroutine.yield(TeleportLoop)
+            TeleportLoop = nil
+        end
+    end
+end)
+
+local TeleportIntervalTextBox = SectionMisc:NewTextBox("Teleport Interval", "Enter teleport interval in seconds", function(txt)
+    local newInterval = tonumber(txt)
+    if newInterval and newInterval > 0 then
+        TeleportInterval = newInterval
+    else
+        warn("Please enter a valid positive number for the teleport interval.")
+    end
+end)
