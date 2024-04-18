@@ -299,3 +299,11 @@ local TeleportIntervalTextBox = SectionMisc:NewTextBox("Teleport Interval", "Ent
         warn("Please enter a valid positive number for the teleport interval.")
     end
 end)
+
+
+local TabMisc = Window:NewTab("Settings")
+local SectionSettings = TabMisc:NewSection("Settings")
+
+SectionSettings:NewKeybind("KeybindText", "KeybindInfo", Enum.KeyCode.F, function()
+	Library:ToggleUI()
+end)
