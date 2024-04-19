@@ -300,6 +300,173 @@ local TeleportIntervalTextBox = SectionMisc:NewTextBox("Teleport Interval", "Ent
     end
 end)
 
+-- Required services and variables
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local StarterGui = game:GetService("StarterGui")
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+local Camera = game.Workspace.CurrentCamera
+
+local AimlockKey = Enum.KeyCode.Q -- Change this to your desired key
+local AimRadius = 45
+local AimPartOptions = {"UpperTorso", "HumanoidRootPart", "LowerTorso", "Head"}
+local SelectedAimPart = AimPartOptions[1] -- Default selected aim part
+local SmoothnessFactor = 1 -- Default smoothness factor (100%)
+local PredictionMovement = 1 -- Default prediction movement value
+
+local isAimLockEnabled = false
+local aimLocked = nil
+
+-- Create Kavo GUI elements
+local TabAimmy = Window:NewTab("Aimmy GPT V1")
+local SectionAimmy = TabAimmy:NewSection("Aimmy GPT V1")
+
+-- Function to smoothly adjust camera position
+local function SmoothCameraPosition(currentPosition, targetPosition, smoothness)
+    return currentPosition:Lerp(targetPosition, smoothness)
+end
+
+-- Function to predict target position with movement considering left-right motion
+local function PredictPositionWithMovement(target, movement)
+    if target and target.Character and target.Character:FindFirstChild(SelectedAimPart) then
+        local targetPosition = target.Character[SelectedAimPart].Position
+        local targetVelocity = target.Character[SelectedAimPart].Velocity
+        local horizontalVelocity = Vector3.new(targetVelocity.X, 0, targetVelocity.Z) -- Consider only X and Z velocity
+        local predictedPosition = targetPosition + horizontalVelocity * movement
+        return predictedPosition
+    end
+    return nil
+end
+
+-- Function to lock onto target
+local function LockOnTarget(target)
+    if target and target.Character and target.Character:FindFirstChild(SelectedAimPart) then
+        local aimPosition = target.Character[SelectedAimPart].Position
+        local aimFrame = CFrame.new(Camera.CFrame.Position, aimPosition)
+        local predictedPosition = PredictPositionWithMovement(target, PredictionMovement)
+
+        if predictedPosition then
+            local smoothness = SmoothnessFactor
+            local smoothedPosition = SmoothCameraPosition(Camera.CFrame, aimFrame, smoothness)
+            Camera.CFrame = smoothedPosition
+        else
+            Camera.CFrame = aimFrame
+        end
+    end
+end
+
+-- Add lock button to Kavo GUI
+SectionAimmy:NewButton("Enable Aim Lock", "Enables aim lock functionality", function()
+    isAimLockEnabled = not isAimLockEnabled
+    print("Aim lock enabled:", isAimLockEnabled)
+
+    if isAimLockEnabled then
+        local nearestTarget = nil
+        local nearestDistance = AimRadius
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                local character = player.Character
+                if character and character:FindFirstChild(SelectedAimPart) then
+                    local screenPos, onScreen = Camera:WorldToScreenPoint(character[SelectedAimPart].Position)
+                    if onScreen then
+                        local distance = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
+                        if distance < nearestDistance and distance <= AimRadius then
+                            nearestTarget = player
+                            nearestDistance = distance
+                        end
+                    end
+                end
+            end
+        end
+        aimLocked = nearestTarget
+        LockOnTarget(nearestTarget)
+    else
+        aimLocked = nil
+    end
+end)
+
+-- Add smoothness slider to Kavo GUI
+local SmoothnessSlider = SectionAimmy:NewSlider("Smoothness", "Adjust the smoothness factor", 100, 0, function(value)
+    SmoothnessFactor = 1 - (value / 100)
+    print("Smoothness factor set to:", SmoothnessFactor)
+end)
+
+-- Add aim part dropdown to Kavo GUI
+local AimPartDropdown = SectionAimmy:NewDropdown("Aim Part", "Select the body part to lock onto", AimPartOptions, function(currentOption)
+    SelectedAimPart = currentOption
+    print("Selected Aim Part:", SelectedAimPart)
+end)
+
+-- Add prediction movement text box to Kavo GUI
+local PredictionTextBox = SectionAimmy:NewTextBox("Prediction Movement", "Set the prediction movement value", function(value)
+    PredictionMovement = tonumber(value) or 1
+    print("Prediction Movement set to:", PredictionMovement)
+end)
+
+-- Connect input and render events
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if input.KeyCode == AimlockKey and not gameProcessed then
+        if aimLocked then
+            aimLocked = nil
+        else
+            local nearestTarget = nil
+            local nearestDistance = AimRadius
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer then
+                    local character = player.Character
+                    if character and character:FindFirstChild(SelectedAimPart) then
+                        local screenPos, onScreen = Camera:WorldToScreenPoint(character[SelectedAimPart].Position)
+                        if onScreen then
+                            local distance = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
+                            if distance < nearestDistance and distance <= AimRadius then
+                                nearestTarget = player
+                                nearestDistance = distance
+                            end
+                        end
+                    end
+                end
+            end
+            aimLocked = nearestTarget
+        end
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if aimLocked and aimLocked.Character and aimLocked.Character:FindFirstChild(SelectedAimPart) then
+        local aimPart = aimLocked.Character[SelectedAimPart]
+        local aimPosition = aimPart.Position
+        local aimScreenPos, onScreen = Camera:WorldToScreenPoint(aimPosition)
+
+        if onScreen then
+            local aimFrame = CFrame.new(Camera.CFrame.Position, aimPosition)
+            local predictedPosition = PredictPositionWithMovement(aimLocked, PredictionMovement)
+
+            if predictedPosition then
+                local smoothness = SmoothnessFactor
+                local smoothedPosition = SmoothCameraPosition(Camera.CFrame, aimFrame, smoothness)
+                Camera.CFrame = smoothedPosition
+            else
+                Camera.CFrame = aimFrame
+            end
+        end
+    end
+end)
+
+SectionAimmy:NewLabel("PREDICTION DOESNT WORK YET")
+SectionAimmy:NewLabel("STILL WORKING ON")
+SectionAimmy:NewLabel("JUST USE SMOOTHNESS AS PREDICTION")
+SectionAimmy:NewLabel("FOR NOW :)")
+
+
+
+
+
+
+
+
+
 
 local TabMisc = Window:NewTab("Settings")
 local SectionSettings = TabMisc:NewSection("Settings")
