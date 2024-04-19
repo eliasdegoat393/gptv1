@@ -359,6 +359,23 @@ end
 
 -- Add lock button to Kavo GUI
 SectionAimmy:NewButton("Enable Aim Lock", "Enables aim lock functionality", function()
+    local players = game:GetService("Players")
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "AIMMT V1",
+        Text = "Aimmy V1 script loading... " .. players.LocalPlayer.DisplayName,
+        Icon = "rbxthumb://type=AvatarHeadShot&id=" .. players.LocalPlayer.UserId .. "&w=180&h=180&format=png",
+        Duration = 5
+    })
+
+    wait(5)
+
+    local players = game:GetService("Players")
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "AIMMY V1 LOADED!",
+        Text = "Enjoy Daddy" .. players.LocalPlayer.DisplayName,
+        Icon = "rbxthumb://type=AvatarHeadShot&id=" .. players.LocalPlayer.UserId .. "&w=180&h=180&format=png",
+        Duration = 5
+    })
     isAimLockEnabled = not isAimLockEnabled
     print("Aim lock enabled:", isAimLockEnabled)
 
