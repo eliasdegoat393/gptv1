@@ -300,7 +300,6 @@ local TeleportIntervalTextBox = SectionMisc:NewTextBox("Teleport Interval", "Ent
     end
 end)
 
--- Required services and variables
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -314,7 +313,6 @@ local AimRadius = 45
 local AimPartOptions = {"UpperTorso", "HumanoidRootPart", "LowerTorso", "Head"}
 local SelectedAimPart = AimPartOptions[1] -- Default selected aim part
 local SmoothnessFactor = 1 -- Default smoothness factor (100%)
-local PredictionMovement = 1 -- Default prediction movement value
 
 local isAimLockEnabled = false
 local aimLocked = nil
@@ -328,13 +326,12 @@ local function SmoothCameraPosition(currentPosition, targetPosition, smoothness)
     return currentPosition:Lerp(targetPosition, smoothness)
 end
 
--- Function to predict target position with movement considering left-right motion
-local function PredictPositionWithMovement(target, movement)
+-- Function to predict target position
+local function PredictPosition(target)
     if target and target.Character and target.Character:FindFirstChild(SelectedAimPart) then
         local targetPosition = target.Character[SelectedAimPart].Position
         local targetVelocity = target.Character[SelectedAimPart].Velocity
-        local horizontalVelocity = Vector3.new(targetVelocity.X, 0, targetVelocity.Z) -- Consider only X and Z velocity
-        local predictedPosition = targetPosition + horizontalVelocity * movement
+        local predictedPosition = targetPosition + targetVelocity * SmoothnessFactor
         return predictedPosition
     end
     return nil
@@ -345,7 +342,7 @@ local function LockOnTarget(target)
     if target and target.Character and target.Character:FindFirstChild(SelectedAimPart) then
         local aimPosition = target.Character[SelectedAimPart].Position
         local aimFrame = CFrame.new(Camera.CFrame.Position, aimPosition)
-        local predictedPosition = PredictPositionWithMovement(target, PredictionMovement)
+        local predictedPosition = PredictPosition(target)
 
         if predictedPosition then
             local smoothness = SmoothnessFactor
@@ -358,21 +355,11 @@ local function LockOnTarget(target)
 end
 
 -- Add lock button to Kavo GUI
-SectionAimmy:NewButton("Enable Aim Lock", "Enables aim lock functionality", function()
+SectionAimmy:NewButton("Enable Aimmy V1", "Enables aim lock functionality", function()
     local players = game:GetService("Players")
     game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "AIMMT V1",
+        Title = "Aimmy V1 Loader!",
         Text = "Aimmy V1 script loading... " .. players.LocalPlayer.DisplayName,
-        Icon = "rbxthumb://type=AvatarHeadShot&id=" .. players.LocalPlayer.UserId .. "&w=180&h=180&format=png",
-        Duration = 5
-    })
-
-    wait(5)
-
-    local players = game:GetService("Players")
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "AIMMY V1 LOADED!",
-        Text = "Enjoy Daddy" .. players.LocalPlayer.DisplayName,
         Icon = "rbxthumb://type=AvatarHeadShot&id=" .. players.LocalPlayer.UserId .. "&w=180&h=180&format=png",
         Duration = 5
     })
@@ -406,7 +393,7 @@ end)
 
 -- Add smoothness slider to Kavo GUI
 local SmoothnessSlider = SectionAimmy:NewSlider("Smoothness", "Adjust the smoothness factor", 100, 0, function(value)
-    SmoothnessFactor = 1 - (value / 100)
+    SmoothnessFactor = 1 - (value / 100) -- Convert slider value to smoothness percentage
     print("Smoothness factor set to:", SmoothnessFactor)
 end)
 
@@ -416,15 +403,9 @@ local AimPartDropdown = SectionAimmy:NewDropdown("Aim Part", "Select the body pa
     print("Selected Aim Part:", SelectedAimPart)
 end)
 
--- Add prediction movement text box to Kavo GUI
-local PredictionTextBox = SectionAimmy:NewTextBox("Prediction Movement", "Set the prediction movement value", function(value)
-    PredictionMovement = tonumber(value) or 1
-    print("Prediction Movement set to:", PredictionMovement)
-end)
-
 -- Connect input and render events
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if input.KeyCode == AimlockKey and not gameProcessed then
+    if input.KeyCode == Enum.KeyCode.Q and not gameProcessed then
         if aimLocked then
             aimLocked = nil
         else
@@ -458,7 +439,7 @@ RunService.RenderStepped:Connect(function()
 
         if onScreen then
             local aimFrame = CFrame.new(Camera.CFrame.Position, aimPosition)
-            local predictedPosition = PredictPositionWithMovement(aimLocked, PredictionMovement)
+            local predictedPosition = PredictPosition(aimLocked)
 
             if predictedPosition then
                 local smoothness = SmoothnessFactor
@@ -488,6 +469,6 @@ SectionAimmy:NewLabel("FOR NOW :)")
 local TabMisc = Window:NewTab("Settings")
 local SectionSettings = TabMisc:NewSection("Settings")
 
-SectionSettings:NewKeybind("KeybindText", "KeybindInfo", Enum.KeyCode.F, function()
+SectionSettings:NewKeybind("GUI KEYBIND", "KeybindInfo", Enum.KeyCode.F, function()
 	Library:ToggleUI()
 end)
